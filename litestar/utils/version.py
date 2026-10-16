@@ -13,6 +13,13 @@ _PRE_RELEASE_TAGS = {"alpha", "a", "beta", "b", "rc"}
 _PRE_RELEASE_TAGS_CONVERSIONS: dict[str, _ReleaseLevel] = {"a": "alpha", "b": "beta"}
 
 _VERSION_PARTS_RE = re.compile(r"(\d+|[a-z]+|\.)")
+_VERSION_SUFFIX_RE = re.compile(
+    r"(?P<release>[0-9]+\.[0-9]+\.[0-9]+(?:\.?(?:alpha|a|beta|b|rc)\.?[0-9]+)?)"
+    r"(?=\.post|\.dev|\+)"
+    r"(?:\.post[0-9]*)?(?:\.dev[0-9]*)?"
+    r"(?:\+[a-z0-9]+(?:[._-][a-z0-9]+)*)?",
+    re.IGNORECASE | re.ASCII,
+)
 
 
 class Version(NamedTuple):
@@ -32,7 +39,13 @@ class Version(NamedTuple):
 
 
 def parse_version(raw_version: str) -> Version:
-    """Parse a version string into a :class:`Version`"""
+    """Parse a version string into a :class:`Version`.
+
+    Development, post-release, and local suffixes on three-component versions
+    are accepted, but are not represented in the returned tuple.
+    """
+    if match := _VERSION_SUFFIX_RE.fullmatch(raw_version):
+        raw_version = match["release"].lower()
     parts = [p for p in _VERSION_PARTS_RE.split(raw_version) if p and p != "."]
     release_level: _ReleaseLevel = "final"
     serial = "0"
